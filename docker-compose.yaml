@@ -1,27 +1,38 @@
 version: '3.8'
 services:
+  # Este servicio será para la API (Puerto 9000)
   minio:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: minio-custom
+    container_name: minio-api
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
       interval: 30s
       timeout: 20s
       retries: 3
-    ports:
-      - "9000:9000"
-      - "9001:9001"
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      # Estas variables ayudan a MinIO a saber su dirección final
+      MINIO_SERVER_URL: ${MINIO_SERVER_URL}
+      MINIO_BROWSER_REDIRECT_URL: ${MINIO_BROWSER_REDIRECT_URL}
     volumes:
       - '/mnt/data/files:/data'
-    command: server /data --console-address ":9001"
+    # Importante: Exponemos el 9000 como puerto principal de este servicio
+    ports:
+      - "9000:9000"
+    command: server /data --console-address ":9001" --address ":9000"
     networks:
       - coolify
 
-networks:
-  coolify:
-    external: true
+  # Este servicio "espejo" es solo para habilitar el dominio de la Consola (Puerto 9001)
+  minio-console:
+    image: tgwcco4w84wws8ogokg84884_minio # Usa la imagen recién construida por el primer servicio
+    container_name: minio-console-proxy
+    depends_on:
+      - minio
+    ports:
+      - "9001:9001"
+    networks:
+      - coolify
