@@ -22,17 +22,35 @@ services:
       MINIO_BROWSER_REDIRECT_URL: '${MINIO_BROWSER_REDIRECT_URL}'
       MINIO_BROWSER_REDIRECT: 'on'
     volumes:
-      # Obligatoria: si dos deploys en el mismo servidor comparten ruta,
-      # dos procesos MinIO escribirían sobre los mismos ficheros y corromperían los datos.
-      - '${MINIO_STORAGE_PATH:?Define MINIO_STORAGE_PATH con una ruta única para este deploy (ej. /mnt/data/files-a)}:/data'
-    ports:
-      # Obligatorios: cada deploy en el mismo servidor debe usar puertos host distintos.
-      - '${MINIO_PORT_API:?Define MINIO_PORT_API con un puerto único para este deploy}:9000'
-      - '${MINIO_PORT_CONSOLE:?Define MINIO_PORT_CONSOLE con un puerto único para este deploy}:9001'
+      # Volumen nombrado (sin variables): Coolify lo namespacea automáticamente
+      # por aplicación, así que dos deploys nunca comparten almacenamiento.
+      - minio_data:/data
+    # Sin "ports": Coolify no permite variables ahí (mismo motivo que en volumes)
+    # y el acceso real va por Traefik usando SERVICE_FQDN_MINIO, no por puerto de host.
+    expose:
+      - '9000'
+      - '9001'
     command: 'server /data --console-address ":9001" --address ":9000"'
+    networks:
+      - coolify
+
+  # No es un segundo MinIO (eso corrompería los datos al escribir dos procesos
+  # sobre el mismo volumen): es un simple proxy TCP hacia el puerto de consola
+  # del servicio "minio" real. Existe solo para que Coolify tenga un servicio
+  # llamado "minio-console" al que colgar el dominio SERVICE_FQDN_MINIO_CONSOLE.
+  minio-console:
+    image: alpine/socat
+    command: 'tcp-listen:9001,fork,reuseaddr tcp-connect:minio:9001'
+    depends_on:
+      - minio
+    expose:
+      - '9001'
     networks:
       - coolify
 
 networks:
   coolify:
     external: true
+
+volumes:
+  minio_data:
