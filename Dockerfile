@@ -2,6 +2,12 @@
 FROM golang:1.21-alpine AS builder
 
 WORKDIR /src
+
+# Copiamos primero los ficheros de módulos para cachear las dependencias
+# y no volver a descargarlas en cada rebuild por un cambio de código.
+COPY go.mod go.sum ./
+RUN go mod download
+
 COPY . .
 
 # Compilamos el código fuente para generar el binario

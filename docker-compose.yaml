@@ -1,50 +1,35 @@
 version: '3.8'
+
 services:
-  # Servicio para la API (Puerto 9000)
   minio:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: minio-api
+    # Sin container_name estático: Docker/Coolify asigna nombres únicos por deployment.
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      test:
+        - CMD
+        - curl
+        - '-f'
+        - 'http://localhost:9000/minio/health/live'
       interval: 30s
       timeout: 20s
       retries: 3
     environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
-      MINIO_SERVER_URL: ${MINIO_SERVER_URL}
-      MINIO_BROWSER_REDIRECT_URL: ${MINIO_BROWSER_REDIRECT_URL}
-      MINIO_BROWSER_REDIRECT: "on"
+      MINIO_ROOT_USER: '${MINIO_ROOT_USER}'
+      MINIO_ROOT_PASSWORD: '${MINIO_ROOT_PASSWORD}'
+      MINIO_SERVER_URL: '${MINIO_SERVER_URL}'
+      MINIO_BROWSER_REDIRECT_URL: '${MINIO_BROWSER_REDIRECT_URL}'
+      MINIO_BROWSER_REDIRECT: 'on'
     volumes:
-      - '/mnt/data/files:/data'
+      # Obligatoria: si dos deploys en el mismo servidor comparten ruta,
+      # dos procesos MinIO escribirían sobre los mismos ficheros y corromperían los datos.
+      - '${MINIO_STORAGE_PATH:?Define MINIO_STORAGE_PATH con una ruta única para este deploy (ej. /mnt/data/files-a)}:/data'
     ports:
-      - "9000:9000"
-    command: server /data --console-address ":9001" --address ":9000"
-    networks:
-      - coolify
-
-  # Servicio para la Consola (Puerto 9001)
-  minio-console:
-    # SOLUCIÓN: En lugar de una imagen con ID, le decimos que use el mismo Build
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: minio-console-proxy
-    depends_on:
-      - minio
-    ports:
-      - "9001:9001"
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:9001/minio/health/live || exit 1"]
-      interval: 30s
-      timeout: 20s
-      retries: 3
-    environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
-    command: server /data --console-address ":9001" --address ":9000"
+      # Obligatorios: cada deploy en el mismo servidor debe usar puertos host distintos.
+      - '${MINIO_PORT_API:?Define MINIO_PORT_API con un puerto único para este deploy}:9000'
+      - '${MINIO_PORT_CONSOLE:?Define MINIO_PORT_CONSOLE con un puerto único para este deploy}:9001'
+    command: 'server /data --console-address ":9001" --address ":9000"'
     networks:
       - coolify
 
