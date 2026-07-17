@@ -22,8 +22,9 @@ services:
       MINIO_BROWSER_REDIRECT_URL: '${MINIO_BROWSER_REDIRECT_URL}'
       MINIO_BROWSER_REDIRECT: 'on'
     volumes:
-      # Ruta original de este deploy (tenía los buckets/ficheros existentes).
-      - '/mnt/data/files:/data'
+      # Instancia nueva para Bookylink: ruta distinta a la de la primera instancia
+      # (/mnt/data/files) para que no compartan ni corrompan datos entre sí.
+      - '/mnt/data/bookylink-files:/data'
     # Sin "ports": Coolify no permite variables ahí (mismo motivo que en volumes)
     # y el acceso real va por Traefik usando SERVICE_FQDN_MINIO, no por puerto de host.
     expose:
