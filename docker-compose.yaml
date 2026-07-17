@@ -31,7 +31,13 @@ services:
       - '9000:9000'
     command: 'server /data --console-address ":9001" --address ":9000"'
     networks:
-      - coolify
+      # Alias propio en la red "coolify" (compartida entre TODAS las apps del
+      # servidor): si dos deploys tienen un servicio llamado "minio", ambos
+      # responden al hostname "minio" y Docker reparte DNS entre los dos al
+      # azar. Con este alias, este contenedor es inequívocamente "minio-primary".
+      coolify:
+        aliases:
+          - minio-primary
 
   # No es un segundo MinIO (eso corrompería los datos al escribir dos procesos
   # sobre el mismo volumen): es un simple proxy TCP hacia el puerto de consola
@@ -39,7 +45,7 @@ services:
   # llamado "minio-console" al que colgar el dominio SERVICE_FQDN_MINIO_CONSOLE.
   minio-console:
     image: alpine/socat
-    command: 'tcp-listen:9001,fork,reuseaddr tcp-connect:minio:9001'
+    command: 'tcp-listen:9001,fork,reuseaddr tcp-connect:minio-primary:9001'
     depends_on:
       - minio
     healthcheck:
