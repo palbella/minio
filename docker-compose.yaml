@@ -24,11 +24,11 @@ services:
     volumes:
       # Ruta original de este deploy (tenía los buckets/ficheros existentes).
       - '/mnt/data/files:/data'
-    # Sin "ports": Coolify no permite variables ahí (mismo motivo que en volumes)
-    # y el acceso real va por Traefik usando SERVICE_FQDN_MINIO, no por puerto de host.
-    expose:
-      - '9000'
-      - '9001'
+    # Puertos publicados de forma estática (sin "${}", que es lo que rechaza
+    # Coolify): el Traefik/Domains de Coolify necesita el puerto realmente
+    # publicado, no le basta con "expose".
+    ports:
+      - '9000:9000'
     command: 'server /data --console-address ":9001" --address ":9000"'
     networks:
       - coolify
@@ -51,8 +51,8 @@ services:
       interval: 30s
       timeout: 20s
       retries: 3
-    expose:
-      - '9001'
+    ports:
+      - '9001:9001'
     networks:
       - coolify
 

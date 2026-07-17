@@ -25,11 +25,10 @@ services:
       # Instancia nueva para Bookylink: ruta distinta a la de la primera instancia
       # (/mnt/data/files) para que no compartan ni corrompan datos entre sí.
       - '/mnt/data/bookylink-files:/data'
-    # Sin "ports": Coolify no permite variables ahí (mismo motivo que en volumes)
-    # y el acceso real va por Traefik usando SERVICE_FQDN_MINIO, no por puerto de host.
-    expose:
-      - '9000'
-      - '9001'
+    # Puertos de host distintos a los de la primera instancia (9000/9001) para
+    # no chocar al desplegar ambas en el mismo servidor.
+    ports:
+      - '9010:9000'
     command: 'server /data --console-address ":9001" --address ":9000"'
     networks:
       - coolify
@@ -52,8 +51,8 @@ services:
       interval: 30s
       timeout: 20s
       retries: 3
-    expose:
-      - '9001'
+    ports:
+      - '9011:9001'
     networks:
       - coolify
 
